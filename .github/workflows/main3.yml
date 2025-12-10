@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # AQUÍ ESTÁ EL CAMBIO: Usamos HeaTTheatR en vez de ArtemSBulgakov
+      # Esta versión corrige el error de "invalid user"
+      - name: Build with Buildozer
+        uses: HeaTTheatR/buildozer-action@v1
+        id: buildozer
+        with:
+          command: buildozer android debug
+          buildozer_version: master
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: bin/*.apk
+          

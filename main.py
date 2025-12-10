@@ -9,25 +9,33 @@ from kivy.utils import platform
 import yt_dlp
 import os
 
+# Logger para evitar el error de "str object has no attribute write"
+class MyLogger:
+    def debug(self, msg):
+        pass
+    def warning(self, msg):
+        pass
+    def error(self, msg):
+        print(msg)
+
 class DownloaderApp(App):
     def build(self):
         self.layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
         
-        self.url_input = TextInput(hint_text='Pega el enlace de YouTube aquí', multiline=False, size_hint=(1, 0.2))
+        self.url_input = TextInput(hint_text='Pega enlace (Video o Playlist)', multiline=False, size_hint=(1, 0.2))
         self.layout.add_widget(self.url_input)
         
-        self.download_btn = Button(text='Descargar Video', size_hint=(1, 0.2), background_color=(0, 0.7, 0, 1))
+        self.download_btn = Button(text='Descargar MP3', size_hint=(1, 0.2), background_color=(1, 0.5, 0, 1)) # Naranja para audio
         self.download_btn.bind(on_press=self.start_download_thread)
         self.layout.add_widget(self.download_btn)
         
-        self.status_label = Label(text='Esperando enlace...', size_hint=(1, 0.6))
+        self.status_label = Label(text='Listo para música', size_hint=(1, 0.6))
         self.layout.add_widget(self.status_label)
         
         self.request_android_permissions()
         return self.layout
 
     def request_android_permissions(self):
-        """Pide permiso de almacenamiento al iniciar en Android"""
         if platform == 'android':
             from android.permissions import request_permissions, Permission
             request_permissions([Permission.INTERNET, Permission.WRITE_EXTERNAL_STORAGE, Permission.READ_EXTERNAL_STORAGE])
@@ -35,38 +43,45 @@ class DownloaderApp(App):
     def start_download_thread(self, instance):
         url = self.url_input.text
         if not url:
-            self.status_label.text = "¡Por favor pega un enlace!"
+            self.status_label.text = "¡Falta el enlace!"
             return
         
-        self.status_label.text = "Iniciando descarga..."
+        self.status_label.text = "Descargando y convirtiendo...\n(Esto tarda un poco más)"
         self.download_btn.disabled = True
-        # Ejecutar en segundo plano para no congelar la app
-        threading.Thread(target=self.download_video, args=(url,)).start()
+        threading.Thread(target=self.download_audio, args=(url,)).start()
 
-    def download_video(self, url):
-        # Configuración para guardar en la carpeta de Descargas del móvil
+    def download_audio(self, url):
         download_path = '/sdcard/Download/%(title)s.%(ext)s'
         
+        # Configuración ESPECÍFICA para MP3
         ydl_opts = {
             'outtmpl': download_path,
-            'format': 'best',  # Descarga la mejor calidad disponible (video+audio)
-            'noplaylist': True,
+            'format': 'bestaudio/best', # Descarga solo audio
+            'noplaylist': False,
             'quiet': True,
             'no_warnings': True,
+            'logger': MyLogger(),
+            'ignoreerrors': True,
+            # Aquí ocurre la magia de la conversión:
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
         }
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
-            self.update_status("¡Éxito! Guardado en Descargas.")
+            self.update_status("¡MP3 Guardado!\nRevisa carpeta Descargas.")
         except Exception as e:
             self.update_status(f"Error: {str(e)}")
 
     @mainthread
     def update_status(self, message):
-        """Actualiza la interfaz desde el hilo secundario"""
         self.status_label.text = message
         self.download_btn.disabled = False
 
 if __name__ == '__main__':
     DownloaderApp().run()
+    

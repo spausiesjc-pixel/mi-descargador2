@@ -1,0 +1,39 @@
+name: CI5
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # 1. Instalamos las dependencias necesarias de Linux
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libffi-dev libssl-dev python3-dev \
+          libltdl-dev libgstreamer1.0-dev zip unzip autoconf libtool pkg-config \
+          zlib1g-dev openjdk-17-jdk
+
+      # 2. Instalamos Buildozer y Cython
+      - name: Install Buildozer
+        run: |
+          pip3 install --upgrade pip
+          pip3 install buildozer cython==0.29.33
+
+      # 3. Construimos el APK
+      # Esto tardará un poco más (15-20 min) porque descarga el Android SDK
+      - name: Build APK
+        run: |
+          yes | buildozer android debug
+
+      # 4. Subimos el APK resultante
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: bin/*.apk
+          

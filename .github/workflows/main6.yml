@@ -1,0 +1,64 @@
+name: CI6
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # 1. Preparamos Java (Necesario para Android)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 2. Instalamos las herramientas de Linux necesarias
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-pip \
+            build-essential \
+            git \
+            python3 \
+            python3-dev \
+            ffmpeg \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libsdl2-mixer-dev \
+            libsdl2-ttf-dev \
+            libportmidi-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            zlib1g-dev \
+            libffi-dev \
+            libssl-dev \
+            autoconf \
+            libtool \
+            zip \
+            unzip
+
+      # 3. Instalamos Buildozer y Cython (la versión compatible)
+      - name: Install Buildozer
+        run: |
+          pip3 install --upgrade pip
+          pip3 install buildozer cython==0.29.33
+
+      # 4. Construimos el APK (Aceptamos licencias automáticamente con 'yes')
+      - name: Build APK
+        run: |
+          yes | buildozer android debug
+
+      # 5. Subimos el archivo resultante
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: bin/*.apk
+          

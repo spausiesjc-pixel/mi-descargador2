@@ -9,7 +9,6 @@ from kivy.utils import platform
 import yt_dlp
 import os
 
-# Logger silencioso
 class MyLogger:
     def debug(self, msg): pass
     def warning(self, msg): pass
@@ -19,14 +18,14 @@ class DownloaderApp(App):
     def build(self):
         self.layout = BoxLayout(orientation='vertical', padding=20, spacing=10)
         
-        self.url_input = TextInput(hint_text='Pega enlace (Video o Playlist)', multiline=False, size_hint=(1, 0.2))
+        self.url_input = TextInput(hint_text='Pega enlace aquí', multiline=False, size_hint=(1, 0.2))
         self.layout.add_widget(self.url_input)
         
-        self.download_btn = Button(text='Guardar en Música', size_hint=(1, 0.2), background_color=(1, 0.5, 0, 1))
+        self.download_btn = Button(text='Descargar Audio (M4A)', size_hint=(1, 0.2), background_color=(0, 0.5, 1, 1))
         self.download_btn.bind(on_press=self.start_download_thread)
         self.layout.add_widget(self.download_btn)
         
-        self.status_label = Label(text='Tus canciones irán a la carpeta Music', size_hint=(1, 0.6))
+        self.status_label = Label(text='Guarda en carpeta Music', size_hint=(1, 0.6))
         self.layout.add_widget(self.status_label)
         
         self.request_android_permissions()
@@ -40,36 +39,32 @@ class DownloaderApp(App):
     def start_download_thread(self, instance):
         url = self.url_input.text
         if not url:
-            self.status_label.text = "¡Falta el enlace!"
+            self.status_label.text = "¡Falta enlace!"
             return
         
-        self.status_label.text = "Descargando en carpeta Music..."
+        self.status_label.text = "Descargando..."
         self.download_btn.disabled = True
         threading.Thread(target=self.download_audio, args=(url,)).start()
 
     def download_audio(self, url):
-        # CAMBIO CLAVE: Ahora guardamos en la carpeta Music
+        # Guardamos en Music
         download_path = '/sdcard/Music/%(title)s.%(ext)s'
         
         ydl_opts = {
             'outtmpl': download_path,
-            'format': 'bestaudio/best',
+            # TRUCO: Pedimos m4a directamente. No requiere conversión. ¡No falla!
+            'format': 'bestaudio[ext=m4a]/bestaudio/best',
             'noplaylist': False,
             'quiet': True,
             'no_warnings': True,
             'logger': MyLogger(),
             'ignoreerrors': True,
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
         }
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
-            self.update_status("¡Listo! Revisa tu reproductor de música.")
+            self.update_status("¡GUARDADO!\nBusca el archivo .m4a en Music")
         except Exception as e:
             self.update_status(f"Error: {str(e)}")
 
